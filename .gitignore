@@ -1,0 +1,5 @@
+.env
+#
+utils/*
+.venv/*
+data/*

@@ -29,10 +29,94 @@ GOLDEN_DATASET_PATH = Path(__file__).parent / "golden_dataset.json"
 RESULTS_PATH = Path(__file__).parent / "results.md"
 
 
-def load_golden_dataset() -> list[dict]:
-    """Load golden dataset từ JSON file."""
-    with open(GOLDEN_DATASET_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+# =============================================================================
+# LLM Judge helpers
+# =============================================================================
+
+def _judge(prompt: str) -> float:
+    """Call GPT-4o-mini as a judge, returns score 0.0-1.0."""
+    from openai import OpenAI
+
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an objective evaluator. "
+                    "Respond ONLY with a decimal number between 0.0 and 1.0 "
+                    "representing the score. No explanation."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+        max_tokens=10,
+    )
+    try:
+        return float(response.choices[0].message.content.strip())
+    except ValueError:
+        return 0.5
+
+
+def score_faithfulness(answer: str, context: str) -> float:
+    """Faithfulness: câu trả lời có bám đúng context không?"""
+    prompt = f"""Rate how faithful this answer is to the provided context.
+Score 1.0 if every claim in the answer is directly supported by the context.
+Score 0.0 if the answer contains information not in the context (hallucination).
+
+Context:
+{context[:2000]}
+
+Answer:
+{answer[:1000]}
+
+Score (0.0 to 1.0):"""
+    return _judge(prompt)
+
+
+def score_answer_relevance(question: str, answer: str) -> float:
+    """Answer Relevance: câu trả lời có đúng câu hỏi không?"""
+    prompt = f"""Rate how relevant this answer is to the question.
+Score 1.0 if the answer directly and completely addresses the question.
+Score 0.0 if the answer is off-topic or does not address the question.
+
+Question: {question}
+Answer: {answer[:1000]}
+
+Score (0.0 to 1.0):"""
+    return _judge(prompt)
+
+
+def score_context_recall(question: str, context: str, expected_answer: str) -> float:
+    """Context Recall: retriever có lấy đủ evidence không?"""
+    prompt = f"""Rate how well the retrieved context supports answering this question,
+given the expected answer.
+Score 1.0 if the context contains all information needed to derive the expected answer.
+Score 0.0 if the context is missing key information needed for the answer.
+
+Question: {question}
+Expected answer: {expected_answer}
+Retrieved context:
+{context[:2000]}
+
+Score (0.0 to 1.0):"""
+    return _judge(prompt)
+
+
+def score_context_precision(question: str, context: str) -> float:
+    """Context Precision: bao nhiêu % context thực sự hữu ích?"""
+    prompt = f"""Rate what proportion of the retrieved context is actually relevant to answering the question.
+Score 1.0 if all retrieved context is directly relevant.
+Score 0.0 if all retrieved context is irrelevant noise.
+
+Question: {question}
+Retrieved context:
+{context[:2000]}
+
+Score (0.0 to 1.0):"""
+    return _judge(prompt)
 
 
 # =============================================================================
@@ -159,7 +243,7 @@ def _find_worst_performers(eval_results, golden_dataset: list[dict], top_n: int 
 
 
 # =============================================================================
-# Export Results
+# Main
 # =============================================================================
 
 def export_results(comparison: dict, golden_dataset: list[dict]):

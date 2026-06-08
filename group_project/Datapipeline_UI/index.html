@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minh Luật AI - RAG Prototype</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@700&display=swap');
+
+    :root {
+      --ink: #172523;
+      --muted: #647572;
+      --paper: #f4f2eb;
+      --card: #fffdf8;
+      --line: #deddd4;
+      --green: #173f38;
+      --green-2: #216657;
+      --mint: #d9eee8;
+      --amber: #d8893d;
+      --amber-soft: #f6e7d4;
+      --shadow: 0 16px 45px rgba(27, 52, 47, .08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 76% -10%, rgba(216,137,61,.14), transparent 30%),
+        var(--paper);
+      font-family: Manrope, sans-serif;
+      min-height: 100vh;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .app { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+
+    .sidebar {
+      background: var(--green);
+      color: #eef7f3;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      position: fixed;
+      width: 248px;
+      inset: 0 auto 0 0;
+      z-index: 5;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 8px; }
+    .brand-mark {
+      width: 39px; height: 39px; border-radius: 12px;
+      background: var(--amber); display: grid; place-items: center;
+      color: white; font-weight: 800; font-size: 18px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+    }
+    .brand strong { display: block; font-size: 15px; letter-spacing: .02em; }
+    .brand span { color: #aac7c0; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; }
+    .new-chat {
+      border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.07);
+      color: white; padding: 12px 14px; border-radius: 12px; text-align: left;
+      font-weight: 700; transition: .2s;
+    }
+    .new-chat:hover { background: rgba(255,255,255,.13); transform: translateY(-1px); }
+    .nav-label { color: #8eb0a8; font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; padding: 0 10px; }
+    .nav { display: grid; gap: 5px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 11px; padding: 10px;
+      color: #bad0ca; border-radius: 10px; font-size: 13px; font-weight: 600;
+      border: 0; background: transparent; width: 100%; text-align: left;
+    }
+    .nav-item.active, .nav-item:hover { background: rgba(255,255,255,.09); color: white; }
+    .nav-item svg { width: 17px; height: 17px; }
+    .history { margin-top: 3px; display: grid; gap: 5px; }
+    .history button {
+      background: transparent; border: 0; color: #9dbab3; text-align: left;
+      padding: 8px 10px; font-size: 11px; border-radius: 8px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .history button:hover { color: white; background: rgba(255,255,255,.06); }
+    .profile { margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,.12); display: flex; gap: 10px; align-items: center; }
+    .avatar { width: 31px; height: 31px; border-radius: 50%; background: var(--mint); color: var(--green); display: grid; place-items: center; font-weight: 800; font-size: 11px; }
+    .profile strong { font-size: 11px; display: block; }
+    .profile span { font-size: 9px; color: #9dbab3; }
+
+    main { grid-column: 2; min-width: 0; }
+    .topbar {
+      height: 72px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px; border-bottom: 1px solid var(--line); background: rgba(244,242,235,.82);
+      backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 4;
+    }
+    .top-title strong { font-size: 13px; }
+    .top-title span { font-size: 10px; color: var(--muted); display: block; margin-top: 2px; }
+    .status { display: flex; align-items: center; gap: 9px; font-size: 10px; color: var(--muted); font-weight: 700; }
+    .status-dot { width: 8px; height: 8px; background: #51a684; border-radius: 50%; box-shadow: 0 0 0 5px rgba(81,166,132,.13); }
+    .icon-btn { border: 1px solid var(--line); background: var(--card); width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--green); }
+    .mobile-menu { display: none; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+    .chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 315px; min-height: calc(100vh - 72px); }
+    .chat-column { padding: 42px clamp(20px, 5vw, 72px) 150px; position: relative; max-width: 930px; width: 100%; margin: 0 auto; }
+    .welcome { padding-top: 5vh; max-width: 680px; }
+    .eyebrow { color: var(--amber); font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { font-family: "Playfair Display", serif; font-size: clamp(36px, 5vw, 59px); line-height: 1.06; margin: 15px 0 13px; letter-spacing: -.03em; color: var(--green); }
+    .lead { color: var(--muted); font-size: 13px; line-height: 1.7; max-width: 560px; }
+    .suggestions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; margin-top: 28px; }
+    .suggestion {
+      background: rgba(255,253,248,.66); border: 1px solid var(--line); border-radius: 13px;
+      padding: 15px; text-align: left; color: var(--ink); font-size: 11px; font-weight: 700;
+      line-height: 1.5; min-height: 75px; transition: .2s;
+    }
+    .suggestion:hover { border-color: var(--amber); background: var(--card); transform: translateY(-2px); box-shadow: var(--shadow); }
+    .suggestion span { color: var(--amber); display: block; margin-bottom: 6px; font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
+
+    .messages { display: none; gap: 23px; }
+    .messages.visible { display: grid; }
+    .message { display: flex; gap: 11px; align-items: flex-start; animation: reveal .35s ease both; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+    .message.user { justify-content: flex-end; }
+    .bubble {
+      max-width: 670px; padding: 15px 17px; border-radius: 15px;
+      background: var(--card); border: 1px solid var(--line); font-size: 12px; line-height: 1.75;
+    }
+    .user .bubble { background: var(--green); color: white; border-color: var(--green); border-bottom-right-radius: 4px; }
+    .ai .bubble { border-top-left-radius: 4px; box-shadow: 0 8px 26px rgba(27,52,47,.05); }
+    .ai-avatar { flex: 0 0 29px; width: 29px; height: 29px; border-radius: 9px; display: grid; place-items: center; background: var(--amber); color: white; font-size: 10px; font-weight: 800; margin-top: 3px; }
+    .answer-title { color: var(--green); font-weight: 800; margin-bottom: 6px; font-size: 13px; }
+    .citation { border: 0; color: var(--green-2); background: var(--mint); border-radius: 5px; padding: 2px 5px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .answer-meta { border-top: 1px solid var(--line); margin-top: 13px; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 9px; }
+    .feedback { display: flex; gap: 5px; }
+    .feedback button { border: 0; background: transparent; color: var(--muted); padding: 4px; }
+    .typing { display: none; align-items: center; gap: 4px; padding: 10px; }
+    .typing.show { display: flex; }
+    .typing i { width: 5px; height: 5px; background: var(--muted); border-radius: 50%; animation: pulse 1s infinite alternate; }
+    .typing i:nth-child(2) { animation-delay: .2s; }.typing i:nth-child(3) { animation-delay: .4s; }
+    @keyframes pulse { to { opacity: .25; transform: translateY(-2px); } }
+
+    .composer-wrap { position: fixed; left: 248px; right: 315px; bottom: 0; padding: 22px clamp(20px, 5vw, 72px) 20px; background: linear-gradient(transparent, var(--paper) 25%); z-index: 3; }
+    .composer { max-width: 785px; margin: auto; background: var(--card); border: 1px solid #cfcfc5; border-radius: 15px; display: flex; align-items: center; gap: 10px; padding: 8px 9px 8px 15px; box-shadow: 0 16px 35px rgba(25,49,44,.10); }
+    .composer input { border: 0; outline: 0; background: transparent; width: 100%; color: var(--ink); font-size: 12px; }
+    .send { border: 0; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px; background: var(--green); color: white; display: grid; place-items: center; }
+    .composer-note { max-width: 785px; margin: 7px auto 0; text-align: center; font-size: 8px; color: #8a9693; }
+
+    .sources-panel { border-left: 1px solid var(--line); background: rgba(255,253,248,.42); padding: 25px 18px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 17px; }
+    .panel-head strong { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+    .count { background: var(--mint); color: var(--green); padding: 4px 7px; font-size: 9px; border-radius: 20px; font-weight: 800; }
+    .source-empty { margin-top: 26vh; text-align: center; color: var(--muted); padding: 22px; font-size: 10px; line-height: 1.65; }
+    .source-empty .doc-icon { font-size: 26px; color: #9eb2ad; margin-bottom: 9px; }
+    .source-list { display: none; gap: 10px; }
+    .source-list.visible { display: grid; }
+    .source-card { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 13px; cursor: pointer; transition: .2s; }
+    .source-card:hover, .source-card.focus { border-color: var(--amber); transform: translateY(-1px); box-shadow: 0 8px 25px rgba(25,49,44,.07); }
+    .source-card .type { color: var(--amber); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
+    .source-card h3 { font-size: 10px; line-height: 1.5; margin: 7px 0; }
+    .source-card p { font-size: 9px; line-height: 1.55; color: var(--muted); margin: 0; }
+    .score-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: var(--green-2); font-weight: 800; font-size: 8px; }
+    .bar { height: 3px; background: #e6e5dd; border-radius: 5px; width: 75px; overflow: hidden; }
+    .bar i { height: 100%; display: block; background: var(--green-2); border-radius: 5px; }
+
+    .eval-page { padding: 36px clamp(20px, 4vw, 60px) 60px; max-width: 1320px; margin: auto; }
+    .eval-header { display: flex; align-items: end; justify-content: space-between; margin-bottom: 26px; }
+    .eval-header h2 { font-family: "Playfair Display", serif; color: var(--green); font-size: 34px; margin: 7px 0 0; }
+    .run-btn { background: var(--green); color: white; border: 0; border-radius: 11px; padding: 11px 17px; font-size: 10px; font-weight: 800; }
+    .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .metric-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 17px; box-shadow: 0 7px 26px rgba(25,49,44,.04); }
+    .metric-card span { color: var(--muted); font-size: 9px; font-weight: 700; }
+    .metric-value { font-size: 29px; font-family: "Playfair Display", serif; color: var(--green); margin: 8px 0 5px; }
+    .delta { font-size: 8px; color: var(--green-2); font-weight: 800; }
+    .eval-grid { display: grid; grid-template-columns: 1.4fr .9fr; gap: 14px; margin-top: 14px; }
+    .chart-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 19px; }
+    .chart-card h3 { margin: 0 0 4px; font-size: 11px; }
+    .chart-card > p { margin: 0 0 19px; color: var(--muted); font-size: 9px; }
+    .ab-row { display: grid; grid-template-columns: 120px 1fr 42px; align-items: center; gap: 9px; margin: 15px 0; font-size: 9px; }
+    .ab-bars { display: grid; gap: 4px; }
+    .ab-bar { height: 7px; border-radius: 6px; background: #e8e7df; overflow: hidden; }
+    .ab-bar i { display: block; height: 100%; border-radius: 6px; background: var(--amber); }
+    .ab-bar.config-b i { background: var(--green-2); }
+    .legend { display: flex; gap: 15px; font-size: 8px; color: var(--muted); margin-top: 17px; }
+    .legend i { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 4px; background: var(--amber); }
+    .legend span:last-child i { background: var(--green-2); }
+    .worst-list { display: grid; gap: 9px; }
+    .worst { padding: 11px; border: 1px solid var(--line); border-radius: 10px; }
+    .worst strong { display: block; font-size: 9px; margin-bottom: 5px; }
+    .worst span { font-size: 8px; color: var(--muted); }
+    .risk { color: #b85f37 !important; float: right; font-weight: 800; }
+    .table-card { margin-top: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 19px; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 9px; }
+    th { text-align: left; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 7px; padding: 10px; border-bottom: 1px solid var(--line); }
+    td { padding: 12px 10px; border-bottom: 1px solid #ecebe4; }
+    .pass { color: var(--green-2); background: var(--mint); padding: 4px 7px; border-radius: 20px; font-weight: 800; }
+    .review { color: #a86428; background: var(--amber-soft); padding: 4px 7px; border-radius: 20px; font-weight: 800; }
+
+    @media(max-width: 1050px) {
+      .chat-layout { grid-template-columns: 1fr; }
+      .sources-panel { display: none; }
+      .composer-wrap { right: 0; }
+      .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media(max-width: 720px) {
+      .app { display: block; }
+      .sidebar { transform: translateX(-100%); transition: .25s; box-shadow: var(--shadow); }
+      .sidebar.open { transform: translateX(0); }
+      main { display: block; }
+      .mobile-menu { display: grid; }
+      .topbar { padding: 0 15px; }
+      .top-title { margin-right: auto; margin-left: 10px; }
+      .status span { display: none; }
+      .chat-column { padding: 28px 15px 135px; }
+      .suggestions { grid-template-columns: 1fr; }
+      .suggestion:nth-child(n+4) { display: none; }
+      .composer-wrap { left: 0; padding: 20px 12px 12px; }
+      .eval-grid, .metric-grid { grid-template-columns: 1fr; }
+      .eval-header { align-items: flex-start; gap: 15px; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <div><strong>Minh Luật AI</strong><span>Legal intelligence</span></div>
+      </div>
+      <button class="new-chat" id="newChat">＋ &nbsp; Cuộc trò chuyện mới</button>
+      <div>
+        <div class="nav-label">Không gian làm việc</div>
+        <nav class="nav" style="margin-top:8px">
+          <button class="nav-item active" data-page="chat">⌁ &nbsp; Trợ lý pháp luật</button>
+          <button class="nav-item" data-page="eval">▥ &nbsp; RAG Evaluation</button>
+          <button class="nav-item">▣ &nbsp; Kho tài liệu</button>
+          <button class="nav-item">⌘ &nbsp; Kiến trúc pipeline</button>
+        </nav>
+      </div>
+      <div>
+        <div class="nav-label">Gần đây</div>
+        <div class="history">
+          <button>Hình phạt tàng trữ trái phép...</button>
+          <button>Phân biệt chất ma túy và tiền chất</button>
+          <button>Trách nhiệm của gia đình</button>
+        </div>
+      </div>
+      <div class="profile">
+        <div class="avatar">LĐ</div>
+        <div><strong>Nhóm RAG Cohort 2</strong><span>Workspace · 15 tài liệu</span></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="icon-btn mobile-menu" id="menuBtn">☰</button>
+        <div class="top-title"><strong id="pageTitle">Trợ lý pháp luật</strong><span>Tra cứu từ nguồn đã được kiểm chứng</span></div>
+        <div style="display:flex;align-items:center;gap:15px">
+          <div class="status"><i class="status-dot"></i><span>Pipeline sẵn sàng</span></div>
+          <button class="icon-btn" title="Cài đặt">⚙</button>
+        </div>
+      </header>
+
+      <section class="page active" id="chatPage">
+        <div class="chat-layout">
+          <div class="chat-column">
+            <div class="welcome" id="welcome">
+              <div class="eyebrow">Hỏi đúng · Dẫn nguồn rõ</div>
+              <h1>Pháp luật rõ ràng,<br>quyết định vững vàng.</h1>
+              <p class="lead">Trợ lý AI giúp bạn tra cứu pháp luật Việt Nam về phòng, chống ma túy. Mỗi câu trả lời đều kèm nguồn và mức độ liên quan.</p>
+              <div class="suggestions">
+                <button class="suggestion" data-q="Người tàng trữ trái phép chất ma túy có thể chịu hình phạt nào?"><span>Hình sự</span>Người tàng trữ trái phép chất ma túy có thể chịu hình phạt nào?</button>
+                <button class="suggestion" data-q="Gia đình có trách nhiệm gì trong phòng, chống ma túy?"><span>Phòng chống</span>Gia đình có trách nhiệm gì trong phòng, chống ma túy?</button>
+                <button class="suggestion" data-q="Cai nghiện ma túy tự nguyện được quy định như thế nào?"><span>Cai nghiện</span>Cai nghiện ma túy tự nguyện được quy định như thế nào?</button>
+                <button class="suggestion" data-q="Phân biệt chất ma túy, tiền chất và thuốc gây nghiện."><span>Khái niệm</span>Phân biệt chất ma túy, tiền chất và thuốc gây nghiện.</button>
+              </div>
+            </div>
+
+            <div class="messages" id="messages">
+              <div class="message user"><div class="bubble" id="questionText"></div></div>
+              <div class="message ai">
+                <div class="ai-avatar">M</div>
+                <div class="bubble">
+                  <div class="answer-title">Tóm tắt quy định</div>
+                  <div id="answerText">
+                    Người tàng trữ trái phép chất ma túy có thể bị truy cứu trách nhiệm hình sự theo <strong>Điều 249 Bộ luật Hình sự 2015</strong>. Khung hình phạt phụ thuộc vào loại, khối lượng chất ma túy và các tình tiết tăng nặng. Mức cơ bản là phạt tù từ 01 đến 05 năm <button class="citation" data-source="1">[BLHS, 2015]</button>.<br><br>
+                    Nếu có tổ chức, phạm tội nhiều lần, lợi dụng chức vụ hoặc khối lượng chất ma túy đạt ngưỡng cao hơn, hình phạt có thể tăng lên từ 05 năm đến 20 năm hoặc tù chung thân <button class="citation" data-source="1">[BLHS, 2015]</button>.<br><br>
+                    Ngoài ra, người phạm tội còn có thể bị phạt tiền, cấm đảm nhiệm chức vụ hoặc tịch thu tài sản. Cần xác định chính xác loại và khối lượng chất để áp dụng đúng khung hình phạt <button class="citation" data-source="2">[Luật 73/2021/QH15]</button>.
+                  </div>
+                  <div class="answer-meta"><span>3 nguồn · 6,2 giây · Hybrid + Rerank</span><div class="feedback"><button>♡</button><button>⌑</button><button>⧉</button></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="typing" id="typing"><i></i><i></i><i></i><span style="font-size:9px;color:var(--muted);margin-left:5px">Đang tìm trong nguồn luật...</span></div>
+          </div>
+
+          <aside class="sources-panel">
+            <div class="panel-head"><strong>Nguồn tham khảo</strong><span class="count" id="sourceCount">0 nguồn</span></div>
+            <div class="source-empty" id="sourceEmpty"><div class="doc-icon">▤</div>Nguồn tài liệu được sử dụng sẽ xuất hiện tại đây sau khi bạn đặt câu hỏi.</div>
+            <div class="source-list" id="sourceList">
+              <article class="source-card" data-source-card="1">
+                <div class="type">Văn bản pháp luật · Điều 249</div>
+                <h3>Bộ luật Hình sự 2015, sửa đổi 2017</h3>
+                <p>Tội tàng trữ trái phép chất ma túy và các khung hình phạt áp dụng...</p>
+                <div class="score-row"><span>Liên quan 97%</span><div class="bar"><i style="width:97%"></i></div></div>
+              </article>
+              <article class="source-card" data-source-card="2">
+                <div class="type">Luật · Chương II</div>
+                <h3>Luật Phòng, chống ma túy 2021</h3>
+                <p>Quy định về quản lý chất ma túy, tiền chất và trách nhiệm phòng ngừa...</p>
+                <div class="score-row"><span>Liên quan 89%</span><div class="bar"><i style="width:89%"></i></div></div>
+              </article>
+              <article class="source-card" data-source-card="3">
+                <div class="type">Nghị định · Chính phủ</div>
+                <h3>Nghị định 105/2021/NĐ-CP</h3>
+                <p>Quy định chi tiết và hướng dẫn thi hành một số điều của Luật...</p>
+                <div class="score-row"><span>Liên quan 81%</span><div class="bar"><i style="width:81%"></i></div></div>
+              </article>
+            </div>
+          </aside>
+        </div>
+        <div class="composer-wrap">
+          <form class="composer" id="composer">
+            <input id="queryInput" placeholder="Hỏi về pháp luật phòng, chống ma túy..." autocomplete="off">
+            <button class="send" aria-label="Gửi">↑</button>
+          </form>
+          <div class="composer-note">AI có thể mắc lỗi. Hãy kiểm tra nguồn dẫn trước khi đưa ra quyết định pháp lý.</div>
+        </div>
+      </section>
+
+      <section class="page" id="evalPage">
+        <div class="eval-page">
+          <div class="eval-header">
+            <div><div class="eyebrow">RAGAS · Golden dataset 20 câu hỏi</div><h2>Đánh giá chất lượng pipeline</h2></div>
+            <button class="run-btn" id="runEval">▶ &nbsp; Chạy evaluation</button>
+          </div>
+          <div class="metric-grid">
+            <div class="metric-card"><span>FAITHFULNESS</span><div class="metric-value" data-target="0.91">0.91</div><div class="delta">↑ 8.3% so với dense-only</div></div>
+            <div class="metric-card"><span>ANSWER RELEVANCE</span><div class="metric-value" data-target="0.88">0.88</div><div class="delta">↑ 5.1% so với dense-only</div></div>
+            <div class="metric-card"><span>CONTEXT RECALL</span><div class="metric-value" data-target="0.86">0.86</div><div class="delta">↑ 11.7% so với dense-only</div></div>
+            <div class="metric-card"><span>CONTEXT PRECISION</span><div class="metric-value" data-target="0.84">0.84</div><div class="delta">↑ 14.2% so với dense-only</div></div>
+          </div>
+          <div class="eval-grid">
+            <div class="chart-card">
+              <h3>So sánh cấu hình A/B</h3><p>Dense-only và Hybrid + Reranking trên cùng golden dataset</p>
+              <div class="ab-row"><span>Faithfulness</span><div class="ab-bars"><div class="ab-bar"><i style="width:84%"></i></div><div class="ab-bar config-b"><i style="width:91%"></i></div></div><strong>+0.07</strong></div>
+              <div class="ab-row"><span>Answer relevance</span><div class="ab-bars"><div class="ab-bar"><i style="width:82%"></i></div><div class="ab-bar config-b"><i style="width:88%"></i></div></div><strong>+0.06</strong></div>
+              <div class="ab-row"><span>Context recall</span><div class="ab-bars"><div class="ab-bar"><i style="width:77%"></i></div><div class="ab-bar config-b"><i style="width:86%"></i></div></div><strong>+0.09</strong></div>
+              <div class="ab-row"><span>Context precision</span><div class="ab-bars"><div class="ab-bar"><i style="width:73%"></i></div><div class="ab-bar config-b"><i style="width:84%"></i></div></div><strong>+0.11</strong></div>
+              <div class="legend"><span><i></i>Config A · Dense-only</span><span><i></i>Config B · Hybrid + Rerank</span></div>
+            </div>
+            <div class="chart-card">
+              <h3>Câu hỏi cần cải thiện</h3><p>Worst performers theo tổng điểm</p>
+              <div class="worst-list">
+                <div class="worst"><strong>#12 · Phân biệt tiền chất loại 1 và 2 <span class="risk">0.58</span></strong><span>Thiếu context từ phụ lục nghị định</span></div>
+                <div class="worst"><strong>#07 · Quy trình cai nghiện bắt buộc <span class="risk">0.64</span></strong><span>Citation chưa đủ cụ thể đến khoản</span></div>
+                <div class="worst"><strong>#18 · Tin tức nghệ sĩ năm 2023 <span class="risk">0.69</span></strong><span>Dữ liệu báo chí cần cập nhật</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="panel-head"><strong>Kết quả gần nhất</strong><span class="count">20 test cases</span></div>
+            <table>
+              <thead><tr><th>Câu hỏi</th><th>Faithfulness</th><th>Relevance</th><th>Recall</th><th>Precision</th><th>Trạng thái</th></tr></thead>
+              <tbody>
+                <tr><td>Hình phạt tàng trữ trái phép chất ma túy?</td><td>0.96</td><td>0.94</td><td>0.90</td><td>0.91</td><td><span class="pass">Đạt</span></td></tr>
+                <tr><td>Gia đình có trách nhiệm gì trong phòng chống?</td><td>0.93</td><td>0.91</td><td>0.88</td><td>0.86</td><td><span class="pass">Đạt</span></td></tr>
+                <tr><td>Phân biệt tiền chất loại 1 và loại 2?</td><td>0.72</td><td>0.76</td><td>0.58</td><td>0.66</td><td><span class="review">Xem lại</span></td></tr>
+                <tr><td>Cai nghiện tự nguyện được quy định thế nào?</td><td>0.92</td><td>0.89</td><td>0.87</td><td>0.85</td><td><span class="pass">Đạt</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const welcome = document.getElementById('welcome');
+    const messages = document.getElementById('messages');
+    const typing = document.getElementById('typing');
+    const sourceEmpty = document.getElementById('sourceEmpty');
+    const sourceList = document.getElementById('sourceList');
+    const sourceCount = document.getElementById('sourceCount');
+    const questionText = document.getElementById('questionText');
+    const input = document.getElementById('queryInput');
+
+    /* ---- helpers ---- */
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function mdToHtml(text) {
+      // bold, inline citation brackets
+      return escHtml(text)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\[(.+?)\]/g, '<span class="citation">[$1]</span>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    }
+    function buildSourceCards(sources) {
+      if (!sources || !sources.length) return '';
+      return sources.map((s, i) => `
+        <article class="source-card" data-source-card="${i+1}">
+          <div class="type">Tin tức · ${s.date || ''}</div>
+          <h3>${escHtml(s.title || 'Không rõ nguồn')}</h3>
+          <p>${escHtml(s.snippet || '')}</p>
+          <div class="score-row">
+            <span>Liên quan ${s.score || 0}%</span>
+            <div class="bar"><i style="width:${s.score || 0}%"></i></div>
+          </div>
+        </article>`).join('');
+    }
+
+    /* ---- ask (real API) ---- */
+    async function ask(question) {
+      if (!question.trim()) return;
+      welcome.style.display = 'none';
+      messages.classList.remove('visible');
+      questionText.textContent = question;
+      typing.classList.add('show');
+      input.value = '';
+      input.disabled = true;
+
+      try {
+        const res = await fetch('/api/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.detail || 'Lỗi máy chủ');
+
+        // Update answer
+        const answerEl = document.getElementById('answerText');
+        answerEl.innerHTML = '<p>' + mdToHtml(data.answer || '') + '</p>';
+
+        // Update sources panel
+        const n = (data.sources || []).length;
+        sourceCount.textContent = n + ' nguồn';
+        sourceList.innerHTML = buildSourceCards(data.sources);
+        sourceEmpty.style.display = n ? 'none' : 'block';
+        sourceList.classList.toggle('visible', n > 0);
+
+        // Update meta line
+        const metaEl = document.querySelector('.answer-meta span');
+        if (metaEl) metaEl.textContent = `${n} nguồn · Hybrid + RRF`;
+
+      } catch (err) {
+        document.getElementById('answerText').innerHTML =
+          '<span style="color:#b85f37">⚠ ' + escHtml(err.message) + '</span>';
+        sourceCount.textContent = '0 nguồn';
+        sourceEmpty.style.display = 'block';
+        sourceList.classList.remove('visible');
+      } finally {
+        typing.classList.remove('show');
+        messages.classList.add('visible');
+        input.disabled = false;
+      }
+    }
+
+    document.querySelectorAll('.suggestion').forEach(btn => btn.addEventListener('click', () => ask(btn.dataset.q)));
+    document.getElementById('composer').addEventListener('submit', e => { e.preventDefault(); ask(input.value); });
+    document.getElementById('newChat').addEventListener('click', () => {
+      messages.classList.remove('visible'); welcome.style.display = 'block';
+      sourceList.classList.remove('visible'); sourceEmpty.style.display = 'block'; sourceCount.textContent = '0 nguồn';
+    });
+
+    document.querySelectorAll('.nav-item[data-page]').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); btn.classList.add('active');
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(btn.dataset.page + 'Page').classList.add('active');
+      document.getElementById('pageTitle').textContent = btn.dataset.page === 'chat' ? 'Trợ lý pháp luật' : 'RAG Evaluation';
+      document.getElementById('sidebar').classList.remove('open');
+    }));
+
+    document.getElementById('menuBtn').addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
+    document.getElementById('runEval').addEventListener('click', async function() {
+      this.textContent = 'Đang đánh giá...';
+      document.querySelectorAll('.metric-value').forEach(el => el.textContent = '0.00');
+      await new Promise(r => setTimeout(r, 900));
+      document.querySelectorAll('.metric-value').forEach(el => el.textContent = el.dataset.target);
+      this.textContent = '✓ Hoàn tất 20/20';
+      setTimeout(() => this.textContent = '▶   Chạy evaluation', 1800);
+    });
+  </script>
+</body>
+</html>
