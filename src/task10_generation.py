@@ -49,6 +49,22 @@ def reorder_for_llm(chunks: list[dict]) -> list[dict]:
     odds = chunks[1::2]     # index 1,3,... — thấp hơn, vào cuối (đảo ngược)
     return evens + list(reversed(odds))
 
+    Args:
+        chunks: List sorted by score descending (from retrieval)
+
+    Returns:
+        List reordered để maximize LLM attention.
+    """
+    if len(chunks) <= 2:
+        return chunks
+    front = chunks[::2]        # vị trí 0, 2, 4, ... → đầu
+    back = chunks[1::2][::-1]  # vị trí 1, 3, 5, ... → đảo → cuối
+    return front + back
+
+
+# =============================================================================
+# CONTEXT FORMATTING
+# =============================================================================
 
 def format_context(chunks: list[dict]) -> str:
     """Format chunks thành context string có nhãn nguồn."""
@@ -65,6 +81,24 @@ def format_context(chunks: list[dict]) -> str:
         )
     return "\n---\n".join(parts)
 
+    Returns:
+        Formatted context string.
+    """
+    parts = []
+    for i, chunk in enumerate(chunks, 1):
+        meta = chunk.get("metadata", {})
+        source = meta.get("source", f"Source {i}")
+        doc_type = meta.get("type", "unknown")
+        parts.append(
+            f"[Document {i} | Source: {source} | Type: {doc_type}]\n"
+            f"{chunk['content']}\n"
+        )
+    return "\n---\n".join(parts)
+
+
+# =============================================================================
+# GENERATION
+# =============================================================================
 
 def generate_with_citation(query: str, top_k: int = TOP_K) -> dict:
     """
@@ -87,10 +121,10 @@ def generate_with_citation(query: str, top_k: int = TOP_K) -> dict:
             "retrieval_source": "none",
         }
 
-    # Step 2: Reorder (tránh lost in the middle)
+    # Step 2: Reorder để tránh lost in the middle
     reordered = reorder_for_llm(chunks)
 
-    # Step 3: Format context
+    # Step 3: Format context với source labels
     context = format_context(reordered)
 
     # Step 4: Build prompt
@@ -112,6 +146,7 @@ def generate_with_citation(query: str, top_k: int = TOP_K) -> dict:
 
     answer = response.choices[0].message.content
 
+    # Step 6: Return
     return {
         "answer": answer,
         "sources": chunks,

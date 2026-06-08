@@ -1,33 +1,29 @@
 """
-RAG Evaluation Pipeline — LLM-as-Judge approach.
-
-Sử dụng GPT-4o-mini làm judge để đánh giá 4 metrics:
-  1. Faithfulness    — Câu trả lời có bám đúng context không?
-  2. Answer Relevance — Câu trả lời có đúng câu hỏi không?
-  3. Context Recall  — Retriever có lấy đủ evidence không?
-  4. Context Precision — Trong context lấy về, bao nhiêu % thực sự hữu ích?
-
-A/B Comparison:
-  Config A: Dense-only (chỉ semantic search, không reranking)
-  Config B: Hybrid + RRF Reranking (semantic + lexical + RRF)
+RAG Evaluation Pipeline — DeepEval (Group Project — Person 2).
 
 Chạy:
     python -m group_project.evaluation.eval_pipeline
+
+Yêu cầu:
+    pip install deepeval
+    OPENAI_API_KEY phải được set trong .env
+
+Pipeline:
+    1. Load golden_dataset.json (17 cặp Q&A)
+    2. Chạy RAG pipeline trên từng question với 2 configs
+    3. Evaluate với 4 metrics (Faithfulness, AnswerRelevancy, ContextualRecall, ContextualPrecision)
+    4. So sánh A/B: Config A (hybrid + reranking) vs Config B (hybrid, no reranking)
+    5. Export kết quả ra results.md
 """
 
 import json
-import os
 import sys
-import time
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# Add project root to path
+# Thêm root vào PYTHONPATH khi chạy trực tiếp
 ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(ROOT))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 GOLDEN_DATASET_PATH = Path(__file__).parent / "golden_dataset.json"
 RESULTS_PATH = Path(__file__).parent / "results.md"
@@ -124,228 +120,211 @@ Score (0.0 to 1.0):"""
 
 
 # =============================================================================
-# Single test case evaluation
+# DeepEval Evaluation
 # =============================================================================
 
-def evaluate_single(
-    question: str,
-    expected_answer: str,
-    rag_fn,
+def evaluate_with_deepeval(
+    generate_fn,
+    golden_dataset: list[dict],
     use_reranking: bool = True,
-) -> dict:
-    """Evaluate một test case. Returns dict với answer, sources, metrics."""
-    result = rag_fn(question, use_reranking=use_reranking)
-    answer = result["answer"]
-    sources = result["sources"]
-    context = "\n\n---\n\n".join(c["content"] for c in sources[:5])
+    verbose: bool = True,
+) -> list:
+    """
+    Evaluate RAG pipeline sử dụng DeepEval.
 
-    faithfulness = score_faithfulness(answer, context)
-    relevance = score_answer_relevance(question, answer)
-    recall = score_context_recall(question, context, expected_answer)
-    precision = score_context_precision(question, context)
+    Args:
+        generate_fn: Callable nhận (question, use_reranking) → {'answer', 'sources', ...}
+        golden_dataset: List của {'question', 'expected_answer', 'expected_context'}
+        use_reranking: Config flag truyền vào generate_fn
+        verbose: In tiến trình
 
-    return {
-        "question": question,
-        "answer": answer,
-        "expected_answer": expected_answer,
-        "context_chunks": len(sources),
-        "faithfulness": faithfulness,
-        "answer_relevance": relevance,
-        "context_recall": recall,
-        "context_precision": precision,
-        "avg_score": (faithfulness + relevance + recall + precision) / 4,
-    }
-
-
-# =============================================================================
-# RAG pipeline wrappers (A/B configs)
-# =============================================================================
-
-def rag_hybrid_rerank(question: str, use_reranking: bool = True) -> dict:
-    """Config B: Hybrid search + RRF reranking (mặc định)."""
-    from src.task9_retrieval_pipeline import retrieve
-    from src.task10_generation import generate_with_citation, reorder_for_llm, format_context, SYSTEM_PROMPT, TEMPERATURE, TOP_P
-    import os
-    from openai import OpenAI
-
-    chunks = retrieve(question, top_k=5, use_reranking=use_reranking)
-    if not chunks:
-        return {"answer": "Toi khong the xac minh thong tin nay.", "sources": []}
-
-    reordered = reorder_for_llm(chunks)
-    context = format_context(reordered)
-    user_message = f"Context:\n{context}\n\n---\n\nCau hoi: {question}"
-
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
-        temperature=TEMPERATURE,
-        top_p=TOP_P,
+    Returns:
+        List of TestResult objects từ DeepEval.
+    """
+    from deepeval import evaluate
+    from deepeval.metrics import (
+        FaithfulnessMetric,
+        AnswerRelevancyMetric,
+        ContextualRecallMetric,
+        ContextualPrecisionMetric,
     )
-    return {"answer": response.choices[0].message.content, "sources": chunks}
+    from deepeval.test_case import LLMTestCase
 
+    test_cases = []
+    for i, item in enumerate(golden_dataset):
+        if verbose:
+            print(f"  [{i+1}/{len(golden_dataset)}] {item['question'][:60]}...")
 
-def rag_dense_only(question: str, use_reranking: bool = False) -> dict:
-    """Config A: Dense-only (semantic search, no RRF)."""
-    from src.task5_semantic_search import semantic_search
-    from src.task10_generation import reorder_for_llm, format_context, SYSTEM_PROMPT, TEMPERATURE, TOP_P
-    import os
-    from openai import OpenAI
+        result = generate_fn(item["question"], use_reranking=use_reranking)
 
-    chunks = semantic_search(question, top_k=5)
-    for c in chunks:
-        c["source"] = "dense"
-    if not chunks:
-        return {"answer": "Toi khong the xac minh thong tin nay.", "sources": []}
+        test_case = LLMTestCase(
+            input=item["question"],
+            actual_output=result["answer"],
+            expected_output=item["expected_answer"],
+            retrieval_context=[c["content"] for c in result["sources"]],
+        )
+        test_cases.append(test_case)
 
-    reordered = reorder_for_llm(chunks)
-    context = format_context(reordered)
-    user_message = f"Context:\n{context}\n\n---\n\nCau hoi: {question}"
-
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
-        temperature=TEMPERATURE,
-        top_p=TOP_P,
-    )
-    return {"answer": response.choices[0].message.content, "sources": chunks}
-
-
-# =============================================================================
-# Full evaluation
-# =============================================================================
-
-def run_evaluation(golden_dataset: list[dict], rag_fn, config_name: str) -> list[dict]:
-    """Chạy evaluation trên toàn bộ golden dataset."""
-    results = []
-    total = len(golden_dataset)
-
-    for i, item in enumerate(golden_dataset, 1):
-        print(f"  [{config_name}] {i}/{total}: {item['question'][:60]}...")
-        try:
-            r = evaluate_single(item["question"], item["expected_answer"], rag_fn)
-            results.append(r)
-        except Exception as e:
-            print(f"    ERROR: {e}")
-            results.append({
-                "question": item["question"],
-                "answer": "",
-                "expected_answer": item["expected_answer"],
-                "context_chunks": 0,
-                "faithfulness": 0.0,
-                "answer_relevance": 0.0,
-                "context_recall": 0.0,
-                "context_precision": 0.0,
-                "avg_score": 0.0,
-            })
-        time.sleep(0.5)  # Tránh rate limit
-
-    return results
-
-
-def compute_averages(results: list[dict]) -> dict:
-    if not results:
-        return {}
-    n = len(results)
-    return {
-        "faithfulness": round(sum(r["faithfulness"] for r in results) / n, 3),
-        "answer_relevance": round(sum(r["answer_relevance"] for r in results) / n, 3),
-        "context_recall": round(sum(r["context_recall"] for r in results) / n, 3),
-        "context_precision": round(sum(r["context_precision"] for r in results) / n, 3),
-        "avg_score": round(sum(r["avg_score"] for r in results) / n, 3),
-    }
-
-
-def find_worst_performers(results: list[dict], n: int = 5) -> list[dict]:
-    return sorted(results, key=lambda x: x["avg_score"])[:n]
-
-
-# =============================================================================
-# Export results.md
-# =============================================================================
-
-def export_results(config_a_results: list[dict], config_b_results: list[dict]):
-    avg_a = compute_averages(config_a_results)
-    avg_b = compute_averages(config_b_results)
-
-    def delta(b, a):
-        d = b - a
-        return f"+{d:.3f}" if d >= 0 else f"{d:.3f}"
-
-    worst = find_worst_performers(config_b_results, n=5)
-
-    lines = [
-        "# RAG Evaluation Results\n",
-        f"**Dataset:** {len(config_b_results)} test cases  ",
-        f"**Model:** gpt-4o-mini (judge + generation)  ",
-        "**Framework:** LLM-as-Judge (custom)\n",
-        "---\n",
-        "## Overall Scores\n",
-        "| Metric | Config A (Dense-only) | Config B (Hybrid+RRF) | Delta |",
-        "|--------|----------------------|----------------------|-------|",
-        f"| Faithfulness    | {avg_a.get('faithfulness',0):.3f} | {avg_b.get('faithfulness',0):.3f} | {delta(avg_b.get('faithfulness',0), avg_a.get('faithfulness',0))} |",
-        f"| Answer Relevance | {avg_a.get('answer_relevance',0):.3f} | {avg_b.get('answer_relevance',0):.3f} | {delta(avg_b.get('answer_relevance',0), avg_a.get('answer_relevance',0))} |",
-        f"| Context Recall  | {avg_a.get('context_recall',0):.3f} | {avg_b.get('context_recall',0):.3f} | {delta(avg_b.get('context_recall',0), avg_a.get('context_recall',0))} |",
-        f"| Context Precision| {avg_a.get('context_precision',0):.3f} | {avg_b.get('context_precision',0):.3f} | {delta(avg_b.get('context_precision',0), avg_a.get('context_precision',0))} |",
-        f"| **Average**     | **{avg_a.get('avg_score',0):.3f}** | **{avg_b.get('avg_score',0):.3f}** | **{delta(avg_b.get('avg_score',0), avg_a.get('avg_score',0))}** |\n",
-        "---\n",
-        "## A/B Comparison Analysis\n",
-        "- **Config A** (Dense-only): Chỉ dùng semantic search với OpenAI embeddings, không reranking.",
-        "- **Config B** (Hybrid+RRF): Kết hợp semantic search + BM25 lexical search, merge bằng RRF.\n",
-        "**Nhận xét:**",
+    metrics = [
+        FaithfulnessMetric(threshold=0.7),
+        AnswerRelevancyMetric(threshold=0.7),
+        ContextualRecallMetric(threshold=0.7),
+        ContextualPrecisionMetric(threshold=0.7),
     ]
 
-    # Analysis
-    if avg_b.get("context_recall", 0) > avg_a.get("context_recall", 0):
-        lines.append("- Hybrid+RRF cải thiện Context Recall vì BM25 bắt được các keyword chính xác (tên người, điều luật).")
-    if avg_b.get("faithfulness", 0) >= avg_a.get("faithfulness", 0):
-        lines.append("- Faithfulness tương đương hoặc cao hơn nhờ context đa dạng hơn từ hybrid search.")
-    lines.append("- RRF fusion cho phép kết quả từ cả 2 retriever, giảm miss rate.\n")
+    return evaluate(test_cases, metrics)
 
-    lines.extend([
-        "---\n",
-        f"## Worst Performers (Config B, {len(worst)} câu thấp nhất)\n",
-        "| # | Câu hỏi | Avg Score | Vấn đề |",
-        "|---|---------|-----------|--------|",
-    ])
 
-    for i, r in enumerate(worst, 1):
-        issue = "Thiếu context chi tiết" if r["context_recall"] < 0.5 else "Citation không đủ"
-        lines.append(f"| {i} | {r['question'][:60]} | {r['avg_score']:.3f} | {issue} |")
+# =============================================================================
+# A/B Comparison
+# =============================================================================
 
-    lines.extend([
-        "\n---\n",
-        "## Detailed Results (Config B)\n",
-        "| Câu hỏi | Faith. | Relev. | Recall | Prec. | Trạng thái |",
-        "|---------|--------|--------|--------|-------|------------|",
-    ])
+def compare_configs(generate_fn, golden_dataset: list[dict]) -> dict:
+    """
+    So sánh A/B giữa 2 configs:
+      - Config A: hybrid search + reranking  (use_reranking=True)
+      - Config B: hybrid search, no reranking (use_reranking=False)
 
-    for r in config_b_results:
-        status = "Dat" if r["avg_score"] >= 0.7 else "Xem lai"
-        q = r["question"][:50] + "..." if len(r["question"]) > 50 else r["question"]
-        lines.append(
-            f"| {q} | {r['faithfulness']:.2f} | {r['answer_relevance']:.2f} | "
-            f"{r['context_recall']:.2f} | {r['context_precision']:.2f} | {status} |"
-        )
+    Returns:
+        {'config_a': results_a, 'config_b': results_b}
+    """
+    print("\n=== Config A: Hybrid + Reranking ===")
+    results_a = evaluate_with_deepeval(generate_fn, golden_dataset, use_reranking=True)
 
-    lines.extend([
-        "\n---\n",
-        "## Recommendations\n",
-        "1. **Them data phap luat**: Hien tai chi co bai bao tin tuc, can them van ban phap luat de tra loi cau hoi ve dieu luat.",
-        "2. **Cai thien chunking**: Loc bo cac chunk navigation/menu, chi giu noi dung chinh.",
-        "3. **Cross-encoder reranking**: Dung Jina Reranker de cai thien Context Precision.",
-        "4. **Conversation memory**: Them follow-up question support cho chatbot.",
-    ])
+    print("\n=== Config B: Hybrid, No Reranking ===")
+    results_b = evaluate_with_deepeval(generate_fn, golden_dataset, use_reranking=False)
 
-    content = "\n".join(lines)
+    return {"config_a": results_a, "config_b": results_b}
+
+
+# =============================================================================
+# Parse DeepEval results
+# =============================================================================
+
+def _extract_scores(eval_results) -> dict:
+    """Trích xuất điểm trung bình từng metric từ DeepEval EvaluationResult."""
+    metric_names = [
+        "FaithfulnessMetric",
+        "AnswerRelevancyMetric",
+        "ContextualRecallMetric",
+        "ContextualPrecisionMetric",
+    ]
+    scores = {name: [] for name in metric_names}
+
+    for test_result in eval_results.test_results:
+        for metric_data in test_result.metrics_data:
+            name = metric_data.name
+            if name in scores and metric_data.score is not None:
+                scores[name].append(metric_data.score)
+
+    return {
+        name: (sum(vals) / len(vals) if vals else 0.0)
+        for name, vals in scores.items()
+    }
+
+
+def _find_worst_performers(eval_results, golden_dataset: list[dict], top_n: int = 3) -> list[dict]:
+    """Tìm top_n test cases có điểm thấp nhất (avg across metrics)."""
+    rows = []
+    for i, test_result in enumerate(eval_results.test_results):
+        scores = [m.score for m in test_result.metrics_data if m.score is not None]
+        avg = sum(scores) / len(scores) if scores else 0.0
+        metric_map = {m.name: m.score for m in test_result.metrics_data}
+        rows.append({
+            "question": golden_dataset[i]["question"],
+            "avg_score": avg,
+            "faithfulness": metric_map.get("FaithfulnessMetric", 0.0),
+            "relevancy": metric_map.get("AnswerRelevancyMetric", 0.0),
+            "recall": metric_map.get("ContextualRecallMetric", 0.0),
+        })
+
+    rows.sort(key=lambda x: x["avg_score"])
+    return rows[:top_n]
+
+
+# =============================================================================
+# Main
+# =============================================================================
+
+def export_results(comparison: dict, golden_dataset: list[dict]):
+    """Export evaluation results ra results.md."""
+    scores_a = _extract_scores(comparison["config_a"])
+    scores_b = _extract_scores(comparison["config_b"])
+    worst = _find_worst_performers(comparison["config_a"], golden_dataset)
+
+    def avg(scores: dict) -> float:
+        vals = list(scores.values())
+        return sum(vals) / len(vals) if vals else 0.0
+
+    def fmt(v) -> str:
+        return f"{v:.3f}" if v is not None else "N/A"
+
+    def delta(a, b) -> str:
+        d = a - b
+        return f"+{d:.3f}" if d >= 0 else f"{d:.3f}"
+
+    content = "# RAG Evaluation Results\n\n"
+    content += "## Framework sử dụng\n\nDeepEval\n\n---\n\n"
+
+    content += "## Overall Scores\n\n"
+    content += "| Metric | Config A (hybrid + rerank) | Config B (no reranking) | Δ |\n"
+    content += "|--------|---------------------------|------------------------|---|\n"
+
+    metric_display = {
+        "FaithfulnessMetric": "Faithfulness",
+        "AnswerRelevancyMetric": "Answer Relevance",
+        "ContextualRecallMetric": "Context Recall",
+        "ContextualPrecisionMetric": "Context Precision",
+    }
+    for key, label in metric_display.items():
+        a = scores_a.get(key, 0.0)
+        b = scores_b.get(key, 0.0)
+        content += f"| {label} | {fmt(a)} | {fmt(b)} | {delta(a, b)} |\n"
+
+    content += f"| **Average** | **{fmt(avg(scores_a))}** | **{fmt(avg(scores_b))}** | **{delta(avg(scores_a), avg(scores_b))}** |\n"
+
+    content += "\n---\n\n"
+    content += "## A/B Comparison Analysis\n\n"
+    content += "**Config A: Hybrid Search + Reranking**\n"
+    content += "> Kết hợp semantic search + BM25 lexical search, sau đó rerank bằng cross-encoder. "
+    content += "Reranking giúp đưa chunks liên quan nhất lên đầu, giảm noise trong context.\n\n"
+    content += "**Config B: Hybrid Search, No Reranking**\n"
+    content += "> Kết hợp semantic search + BM25 lexical search, merge bằng RRF nhưng bỏ bước reranking. "
+    content += "Nhanh hơn nhưng context có thể kém relevant hơn.\n\n"
+    content += "**Kết luận:**\n"
+    if avg(scores_a) >= avg(scores_b):
+        diff = avg(scores_a) - avg(scores_b)
+        content += f"> Config A (hybrid + reranking) tốt hơn Config B {diff:.3f} điểm trung bình. "
+        content += "> Reranking cải thiện chất lượng context, giúp LLM trả lời chính xác và faithful hơn.\n"
+    else:
+        diff = avg(scores_b) - avg(scores_a)
+        content += f"> Config B (no reranking) cho kết quả tương đương hoặc nhỉnh hơn {diff:.3f} điểm. "
+        content += "> Cần phân tích thêm xem reranker hiện tại có phù hợp với domain pháp luật không.\n"
+
+    content += "\n---\n\n"
+    content += "## Worst Performers (Bottom 3 — Config A)\n\n"
+    content += "| # | Question | Faithfulness | Relevance | Recall | Root Cause |\n"
+    content += "|---|----------|-------------|-----------|--------|------------|\n"
+    for i, row in enumerate(worst, 1):
+        q = row["question"][:60] + ("..." if len(row["question"]) > 60 else "")
+        f = fmt(row["faithfulness"])
+        r = fmt(row["relevancy"])
+        rc = fmt(row["recall"])
+        cause = "Retriever không lấy đúng chunk" if row["recall"] < 0.5 else "LLM hallucinate / không đủ evidence"
+        content += f"| {i} | {q} | {f} | {r} | {rc} | {cause} |\n"
+
+    content += "\n---\n\n"
+    content += "## Recommendations\n\n"
+    content += "### Cải tiến 1: Nâng chất lượng chunking\n"
+    content += "**Action:** Thử chunk theo điều/khoản thay vì sliding window — chunk ranh giới điều luật rõ ràng hơn.  \n"
+    content += "**Expected impact:** Tăng Context Precision và Faithfulness vì mỗi chunk sẽ chứa một ý pháp lý hoàn chỉnh.\n\n"
+    content += "### Cải tiến 2: Fine-tune reranker cho domain pháp luật\n"
+    content += "**Action:** Sử dụng reranker được fine-tune trên dữ liệu pháp luật Việt Nam thay vì cross-encoder tổng quát.  \n"
+    content += "**Expected impact:** Tăng Context Recall vì reranker hiểu tốt hơn các thuật ngữ pháp lý.\n\n"
+    content += "### Cải tiến 3: Tăng số lượng golden dataset\n"
+    content += "**Action:** Mở rộng golden dataset lên 30-50 cặp Q&A, bao phủ thêm các điều luật trong Bộ luật Hình sự.  \n"
+    content += "**Expected impact:** Kết quả evaluation đáng tin cậy hơn, phát hiện được thêm điểm yếu của pipeline.\n"
+
     RESULTS_PATH.write_text(content, encoding="utf-8")
     print(f"\nResults exported to {RESULTS_PATH}")
 
@@ -355,35 +334,19 @@ def export_results(config_a_results: list[dict], config_b_results: list[dict]):
 # =============================================================================
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("RAG Evaluation Pipeline")
-    print("=" * 60)
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
 
-    golden_dataset = json.loads(GOLDEN_DATASET_PATH.read_text(encoding="utf-8"))
-    print(f"Loaded {len(golden_dataset)} test cases\n")
+    golden_dataset = load_golden_dataset()
+    print(f"Loaded {len(golden_dataset)} test cases from golden_dataset.json")
 
-    # Dùng subset nhỏ hơn để tiết kiệm API calls (6 câu hỏi)
-    # Comment dòng này để chạy đầy đủ
-    subset = golden_dataset[:6]
+    # Import generation function từ group project
+    from src.generation import generate_with_citation
 
-    print("--- Config A: Dense-only ---")
-    results_a = run_evaluation(subset, rag_dense_only, "Dense-only")
+    print("\nStarting A/B evaluation...")
+    comparison = compare_configs(generate_with_citation, golden_dataset)
 
-    print("\n--- Config B: Hybrid + RRF ---")
-    results_b = run_evaluation(subset, rag_hybrid_rerank, "Hybrid+RRF")
+    print("\nExporting results...")
+    export_results(comparison, golden_dataset)
 
-    avg_a = compute_averages(results_a)
-    avg_b = compute_averages(results_b)
-
-    print("\n=== RESULTS SUMMARY ===")
-    print(f"{'Metric':<20} {'Config A':>12} {'Config B':>12}")
-    print("-" * 46)
-    for metric in ["faithfulness", "answer_relevance", "context_recall", "context_precision"]:
-        print(f"{metric:<20} {avg_a.get(metric, 0):>12.3f} {avg_b.get(metric, 0):>12.3f}")
-    print(f"{'avg_score':<20} {avg_a.get('avg_score', 0):>12.3f} {avg_b.get('avg_score', 0):>12.3f}")
-
-    # Export nếu chạy full dataset
-    if len(subset) == len(golden_dataset):
-        export_results(results_a, results_b)
-    else:
-        print(f"\n[INFO] Chay subset {len(subset)}/{len(golden_dataset)} cau. De export results.md, chay full dataset.")
+    print("\nDone! See group_project/evaluation/results.md")
