@@ -13,5 +13,75 @@
     "question": "Danh mục các chất ma tuý thuộc nhóm I theo quy định pháp luật Việt Nam gồm những chất nào?",
     "expected_answer": "Nhóm I gồm các chất ma tuý tuyệt đối cấm sử dụng trong y học và đời sống, bao gồm heroin, cocaine, methamphetamine, MDMA (ecstasy), cannabis (cần sa), và các chất tương tự.",
     "expected_context": "Nghị định 57/2022/NĐ-CP, Phụ lục I"
+  },
+  {
+    "question": "Theo Luật Phòng chống ma tuý 2021, người nghiện ma tuý được định nghĩa như thế nào?",
+    "expected_answer": "Người nghiện ma tuý là người sử dụng chất ma tuý, thuốc gây nghiện, thuốc hướng thần và bị lệ thuộc vào các chất này.",
+    "expected_context": "Luật Phòng chống ma tuý 2021, Điều 2 khoản 12"
+  },
+  {
+    "question": "Tệ nạn ma tuý được định nghĩa như thế nào theo Luật Phòng chống ma tuý 2021?",
+    "expected_answer": "Tệ nạn ma tuý là việc sử dụng trái phép chất ma tuý, nghiện ma tuý và các hành vi vi phạm pháp luật về ma tuý mà chưa đến mức hoặc không bị truy cứu trách nhiệm hình sự.",
+    "expected_context": "Luật Phòng chống ma tuý 2021, Điều 2 khoản 8"
+  },
+  {
+    "question": "Người sử dụng trái phép chất ma tuý được định nghĩa như thế nào?",
+    "expected_answer": "Người có hành vi sử dụng chất ma tuý mà không được sự cho phép của người hoặc cơ quan chuyên môn có thẩm quyền và xét nghiệm chất ma tuý trong cơ thể có kết quả dương tính.",
+    "expected_context": "Luật Phòng chống ma tuý 2021, Điều 2 khoản 10"
+  },
+  {
+    "question": "Xét nghiệm chất ma tuý trong cơ thể được thực hiện thông qua những mẫu nào?",
+    "expected_answer": "Xét nghiệm chất ma tuý trong cơ thể được thực hiện qua mẫu nước tiểu, mẫu máu hoặc các mẫu vật khác của cơ thể người.",
+    "expected_context": "Luật Phòng chống ma tuý 2021, Điều 2 khoản 11"
+  },
+  {
+    "question": "Cây có chứa chất ma tuý theo Luật Phòng chống ma tuý 2021 bao gồm những loại nào?",
+    "expected_answer": "Cây có chứa chất ma tuý bao gồm cây thuốc phiện, cây côca, cây cần sa và các loại cây khác có chứa chất ma tuý do Chính phủ quy định.",
+    "expected_context": "Luật Phòng chống ma tuý 2021, Điều 2 khoản 6"
+  },
+  {
+    "question": "Tiền chất là gì theo Luật Phòng chống ma tuý 2021?",
+    "expected_answer": "Tiền chất là hóa chất không thể thiếu được trong quá trình điều chế, sản xuất chất ma tuý được quy định trong danh mục tiền chất do Chính phủ ban hành.",
+    "expected_context": "Luật Phòng chống ma tuý 2021, Điều 2 khoản 4"
+  },
+  {
+    "question": "Luật Phòng chống ma tuý 2021 điều chỉnh những nội dung gì?",
+    "expected_answer": "Luật quy định về phòng, chống ma tuý; quản lý người sử dụng trái phép chất ma tuý; cai nghiện ma tuý; trách nhiệm của cá nhân, gia đình, cơ quan, tổ chức trong phòng, chống ma tuý; quản lý nhà nước và hợp tác quốc tế về phòng, chống ma tuý.",
+    "expected_context": "Luật Phòng chống ma tuý 2021, Điều 1"
+  },
+  {
+    "question": "Ca sĩ Miu Lê bị khởi tố về tội gì?",
+    "expected_answer": "Miu Lê bị Cơ quan Cảnh sát điều tra Công an TP Hải Phòng khởi tố bị can và áp dụng biện pháp tạm giam để điều tra hành vi 'Tổ chức sử dụng trái phép chất ma tuý'.",
+    "expected_context": "article_01 — VOV, nghệ sĩ bị khởi tố vì liên quan ma tuý"
+  },
+  {
+    "question": "Diễn viên hài Hữu Tín bị Toà án nhân dân quận 8 tuyên phạt bao nhiêu năm tù?",
+    "expected_answer": "Ngày 28/4/2023, TAND quận 8 tuyên phạt Hữu Tín 7 năm 6 tháng tù về tội 'Tổ chức sử dụng trái phép chất ma tuý'.",
+    "expected_context": "article_01 — VOV, nghệ sĩ bị khởi tố vì liên quan ma tuý"
+  },
+  {
+    "question": "Rapper Bình Gold bị phát hiện dương tính với những chất ma tuý nào?",
+    "expected_answer": "Sau khi dừng xe vì lạng lách trên cao tốc Nội Bài - Lào Cai, Bình Gold bị phát hiện dương tính với chất ma tuý gồm cần sa và bồ đà.",
+    "expected_context": "article_01 — VOV, nghệ sĩ bị khởi tố vì liên quan ma tuý"
+  },
+  {
+    "question": "Ca sĩ Chi Dân bị Công an TPHCM khởi tố để điều tra những hành vi gì?",
+    "expected_answer": "Chi Dân bị Công an TPHCM khởi tố để điều tra hành vi 'Tàng trữ' và 'Tổ chức sử dụng trái phép chất ma tuý'.",
+    "expected_context": "article_01 — VOV, nghệ sĩ bị khởi tố vì liên quan ma tuý"
+  },
+  {
+    "question": "Nhà thiết kế Nguyễn Công Trí liên quan đến ma tuý như thế nào?",
+    "expected_answer": "Tối 23/6/2025, Nguyễn Công Trí cùng Trần Phú Long có hành vi sử dụng trái phép chất ma tuý tại nhà riêng ở TPHCM. Khi kiểm tra, công an phát hiện nhiều vật dụng nghi dùng để sử dụng ma tuý như đĩa sứ, tờ tiền cuộn tròn, thẻ nhựa.",
+    "expected_context": "article_01 — VOV, nghệ sĩ bị khởi tố vì liên quan ma tuý"
+  },
+  {
+    "question": "Diễn viên Lệ Hằng bị khởi tố tội gì và bị phát hiện mang bao nhiêu gam ma tuý?",
+    "expected_answer": "Lệ Hằng bị khởi tố về tội 'Mua bán trái phép chất ma tuý', bị phát hiện trong người có 0,696 gram ma tuý tổng hợp khi kiểm tra hành chính trên phố Khâm Thiên, Hà Nội.",
+    "expected_context": "article_01 — VOV, nghệ sĩ bị khởi tố vì liên quan ma tuý"
+  },
+  {
+    "question": "Ca sĩ Châu Việt Cường đã làm gì sau khi sử dụng ma tuý và gây ra hậu quả gì?",
+    "expected_answer": "Năm 2018, sau khi sử dụng ma tuý cùng nhóm bạn, Châu Việt Cường bị ảo giác và nhét nhiều nhánh tỏi vào miệng một cô gái vì nghĩ nạn nhân bị 'ma nhập', khiến cô gái tử vong do ngạt thở.",
+    "expected_context": "article_01 — VOV, nghệ sĩ bị khởi tố vì liên quan ma tuý"
   }
 ]
