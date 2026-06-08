@@ -1,17 +1,92 @@
 [
   {
-    "question": "Hình phạt cho tội tàng trữ trái phép chất ma tuý theo Điều 249 Bộ luật Hình sự?",
-    "expected_answer": "Phạt tù từ 1 đến 5 năm đối với trường hợp tàng trữ từ 1g đến dưới 5g heroin hoặc cocaine, hoặc chất ma tuý khác với khối lượng tương đương.",
-    "expected_context": "Bộ luật Hình sự 2015, Điều 249"
+    "question": "Rapper Bình Gold bị bắt tạm giam vì tội danh gì?",
+    "expected_answer": "Rapper Bình Gold bị bắt tạm giam vì hành vi cướp tài sản (cướp taxi), thực hiện trong lúc đang phê ma túy.",
+    "expected_context": "Bắt tạm giam rapper Bình Gold — cướp taxi"
   },
   {
-    "question": "Luật Phòng chống ma tuý 2021 quy định những hình thức cai nghiện nào?",
-    "expected_answer": "Cai nghiện tự nguyện tại gia đình, cai nghiện tự nguyện tại cộng đồng, cai nghiện tự nguyện tại cơ sở cai nghiện, và cai nghiện bắt buộc tại cơ sở cai nghiện.",
-    "expected_context": "Luật Phòng chống ma tuý 2021, Chương V"
+    "question": "Ca sĩ Chu Bin bị bắt vì lý do gì?",
+    "expected_answer": "Ca sĩ Chu Bin bị bắt vì liên quan đến ma túy.",
+    "expected_context": "Ca sĩ Chu Bin bị bắt vì liên quan ma túy"
   },
   {
-    "question": "Danh mục các chất ma tuý thuộc nhóm I theo quy định pháp luật Việt Nam gồm những chất nào?",
-    "expected_answer": "Nhóm I gồm các chất ma tuý tuyệt đối cấm sử dụng trong y học và đời sống, bao gồm heroin, cocaine, methamphetamine, MDMA (ecstasy), cannabis (cần sa), và các chất tương tự.",
-    "expected_context": "Nghị định 57/2022/NĐ-CP, Phụ lục I"
+    "question": "Ca sĩ Miu Lê bị bắt với cáo buộc gì?",
+    "expected_answer": "Ca sĩ Miu Lê (tên thật Lê Ánh Nhật) bị bắt với cáo buộc tổ chức sử dụng trái phép chất ma túy cùng hai người bạn.",
+    "expected_context": "Ca sĩ Miu Lê bị bắt với cáo buộc tổ chức sử dụng ma túy"
+  },
+  {
+    "question": "Nhà thiết kế Nguyễn Công Trí bị bắt vì lý do gì?",
+    "expected_answer": "Nhà thiết kế Nguyễn Công Trí bị bắt vì liên quan đến ma túy.",
+    "expected_context": "Nhà thiết kế Nguyễn Công Trí bị bắt vì liên quan ma túy"
+  },
+  {
+    "question": "Ca sĩ Chi Dân bị truy tố cùng với những ai?",
+    "expected_answer": "Ca sĩ Chi Dân bị truy tố cùng với người mẫu Ân Tây và 225 trong đường dây ma túy.",
+    "expected_context": "Truy tố ca sĩ Chi Dân, người mẫu Ân Tây và 225 trong đường dây ma túy"
+  },
+  {
+    "question": "Trong vòng chưa đầy 1 tháng, có bao nhiêu nghệ sĩ Việt bị khởi tố vì ma túy?",
+    "expected_answer": "Trong vòng chưa đầy 1 tháng, có 3 nghệ sĩ Việt bị khởi tố vì liên quan ma túy.",
+    "expected_context": "Chưa đầy 1 tháng 3 nghệ sĩ Việt bị khởi tố vì liên quan ma túy"
+  },
+  {
+    "question": "Ca sĩ Long Nhật có liên quan gì đến ma túy?",
+    "expected_answer": "Ca sĩ Long Nhật bị bắt hoặc bị điều tra liên quan đến ma túy, trước khi bị bắt đã có nhiều thị phi về giới tính.",
+    "expected_context": "Long Nhật trước khi bị bắt đời tư thị phi nhiều năm bị bàn tán về giới tính"
+  },
+  {
+    "question": "Rapper Bình Gold đã cướp tài sản gì và vào thời điểm nào?",
+    "expected_answer": "Rapper Bình Gold đã cướp một chiếc taxi vào ngày 26 tháng 7 năm 2025 trong tình trạng đang phê ma túy.",
+    "expected_context": "Bắt tạm giam rapper Bình Gold — cướp taxi ngày 26/7/2025"
+  },
+  {
+    "question": "Những nghệ sĩ Việt Nam nào bị bắt vì liên quan đến ma túy được đề cập trong các bài báo?",
+    "expected_answer": "Các nghệ sĩ bị bắt gồm: Rapper Bình Gold, Ca sĩ Chu Bin, Ca sĩ Miu Lê, Nhà thiết kế Nguyễn Công Trí, Ca sĩ Chi Dân, Người mẫu Ân Tây, 225, và Ca sĩ Long Nhật.",
+    "expected_context": "Nhiều nghệ sĩ Việt bị bắt vì liên quan ma túy"
+  },
+  {
+    "question": "Ca sĩ Miu Lê tên thật là gì?",
+    "expected_answer": "Ca sĩ Miu Lê tên thật là Lê Ánh Nhật.",
+    "expected_context": "Ca sĩ Miu Lê (tên thật Lê Ánh Nhật)"
+  },
+  {
+    "question": "Đường dây ma túy liên quan đến ca sĩ Chi Dân bao gồm những ai?",
+    "expected_answer": "Đường dây liên quan đến Chi Dân bao gồm ca sĩ Chi Dân, người mẫu Ân Tây và 225.",
+    "expected_context": "Truy tố ca sĩ Chi Dân, người mẫu Ân Tây và 225"
+  },
+  {
+    "question": "Rapper Bình Gold là ai và có những thành tích âm nhạc gì?",
+    "expected_answer": "Rapper Bình Gold là một rapper Việt Nam, đã đạt giải Album Vàng và được nhiều người biết đến nhờ đó.",
+    "expected_context": "Rapper Bình Gold đạt giải Album Vàng"
+  },
+  {
+    "question": "Tình trạng của Rapper Bình Gold khi thực hiện vụ cướp?",
+    "expected_answer": "Rapper Bình Gold đang trong tình trạng phê ma túy khi thực hiện vụ cướp taxi.",
+    "expected_context": "Bình Gold đang phê ma túy khi cướp taxi"
+  },
+  {
+    "question": "Ca sĩ Chu Bin nổi tiếng với những bài hát nào?",
+    "expected_answer": "Ca sĩ Chu Bin nổi tiếng với các bài hát như Hôm nay, Anh đã sai, Người dưng, Anh chỉ cần bên em, Hãy xem là giấc mơ.",
+    "expected_context": "Ca sĩ Chu Bin — các bài hát nổi tiếng"
+  },
+  {
+    "question": "Việc nhiều nghệ sĩ bị bắt vì ma túy trong thời gian ngắn gây ra phản ứng gì từ xã hội?",
+    "expected_answer": "Việc 3 nghệ sĩ bị khởi tố trong vòng chưa đầy 1 tháng gây chấn động dư luận và làm xôn xao giới giải trí Việt Nam.",
+    "expected_context": "3 nghệ sĩ bị khởi tố trong chưa đầy 1 tháng gây chấn động"
+  },
+  {
+    "question": "Công an đã bắt Rapper Bình Gold ở đâu và sau hành vi gì?",
+    "expected_answer": "Công an bắt Rapper Bình Gold sau khi anh ta cướp tài sản (taxi), củng cố chứng cứ và bắt tạm giam.",
+    "expected_context": "Công an bắt tạm giam Bình Gold sau khi cướp taxi"
+  },
+  {
+    "question": "Long Nhật có cuộc đời tư như thế nào trước khi bị bắt?",
+    "expected_answer": "Trước khi bị bắt, ca sĩ Long Nhật có nhiều năm đời tư thị phi, bị bàn tán về giới tính.",
+    "expected_context": "Long Nhật đời tư thị phi nhiều năm bị bàn tán về giới tính trước khi bị bắt"
+  },
+  {
+    "question": "Nguyễn Công Trí là ai trong làng thời trang Việt Nam?",
+    "expected_answer": "Nguyễn Công Trí là một nhà thiết kế thời trang nổi tiếng ở Việt Nam, bị bắt vì liên quan đến ma túy.",
+    "expected_context": "Nhà thiết kế Nguyễn Công Trí bị bắt"
   }
 ]
